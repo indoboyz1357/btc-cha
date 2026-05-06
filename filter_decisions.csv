@@ -1,0 +1,2 @@
+timestamp,m15_candle_time,symbol,direction,signal_type,final_decision,blocked_by_filter,zone_pass,zone_reason,sideways_pass,sideways_reason,timing_pass,timing_reason,m5_color,m1_color,nearest_resistance,nearest_support,wait_seconds,final_action
+2026-05-06T23:30:29,123,BTCUSD,buy,circle,ENTRY,,True,ok,True,ok,True,ok,blue,blue,20000,19000,0,execute_order

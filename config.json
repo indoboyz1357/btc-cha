@@ -1,0 +1,48 @@
+{
+  "mt5_login": 430207633,
+  "mt5_password": "Pierre@136",
+  "mt5_server": "XMGlobal-MT5 18",
+  "websocket_port": 8765,
+  "symbol": "BTCUSD",
+  "trailing_trigger_points": 432,
+  "trailing_stop_points": 62,
+  "auto_trading": {
+    "enabled": false,
+    "scan_interval_seconds": 30,
+    "min_confidence": 70,
+    "lot_size": 0.01,
+    "max_positions": 2,
+    "max_daily_loss_usd": 7.0,
+    "session_filter": [],
+    "allow_buy": true,
+    "allow_sell": true,
+    "allow_counter_trend": false
+  },
+  "filters": {
+    "zone_enabled": true,
+    "sideways_enabled": true,
+    "timing_enabled": true,
+    "timing_wait_mode": true,
+    "max_timing_wait_sec": 900,
+    "shadow_mode": false,
+    
+    "zone_config": {
+      "lookback_candles": 200,
+      "swing_window": 5,
+      "cluster_tolerance_pct": 0.15,
+      "min_touches": 2,
+      "warn_threshold_pts": 200
+    },
+    
+    "sideways_config": {
+      "lookback_candles": 15,
+      "min_body_to_range_ratio": 0.15
+    },
+    
+    "timing_config": {
+      "slow_refresh_sec": 30,
+      "fast_refresh_sec": 5,
+      "m1_confirm_candles": 2
+    }
+  }
+}
