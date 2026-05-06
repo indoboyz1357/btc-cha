@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useAppStore } from "@/store/useAppStore";
+import { BRIDGE_CONNECTED_EVENT } from "@/hooks/useSignalVoice";
 import type { Timeframe, Candle, CrystalHACandle, Position, PendingOrder } from "@/types";
 
 const HEARTBEAT_INTERVAL = 10_000;
@@ -28,6 +29,8 @@ export function useMT5Bridge() {
         attemptRef.current = 0;
         store.setConnected(true);
         store.addToast("success", "Bridge terhubung!");
+        // 🔊 Trigger welcome voice di useSignalVoice
+        window.dispatchEvent(new Event(BRIDGE_CONNECTED_EVENT));
 
         pingRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ cmd: "get_auto_status" }));
@@ -67,11 +70,29 @@ export function useMT5Bridge() {
     const type = msg.type as string;
 
     if (type === "tick") {
-      store.updatePrice(msg.bid as number, msg.ask as number);
+      // Throttle tick: hanya update kalau harga berubah minimal 0.01
+      const newBid = msg.bid as number;
+      const curPrice = useAppStore.getState().currentPrice;
+      if (Math.abs(newBid - curPrice) >= 0.01) {
+        store.updatePrice(newBid, msg.ask as number);
+      }
     } else if (type === "candles") {
       store.updateCandles(msg.timeframe as Timeframe, msg.data as Candle[]);
     } else if (type === "crystal_ha") {
-      store.updateCrystalHA(msg.timeframe as Timeframe, msg.data as CrystalHACandle[]);
+      const tf   = msg.timeframe as Timeframe;
+      const data = msg.data as CrystalHACandle[];
+      // Throttle: hanya update kalau candle terakhir berubah
+      const existing = useAppStore.getState().crystalHA[tf];
+      const lastNew  = data[data.length - 1];
+      const lastOld  = existing?.[existing.length - 1];
+      if (
+        !lastOld ||
+        lastNew?.time     !== lastOld?.time ||
+        lastNew?.ha_close !== lastOld?.ha_close ||
+        lastNew?.ha_open  !== lastOld?.ha_open
+      ) {
+        store.updateCrystalHA(tf, data);
+      }
     } else if (type === "positions") {
       store.updatePositions(msg.data as Position[]);
     } else if (type === "orders") {
@@ -80,7 +101,6 @@ export function useMT5Bridge() {
       store.updateAutoStatus({
         enabled:         msg.enabled as boolean,
         scan_interval:   msg.scan_interval as number,
-        min_confidence:  msg.min_confidence as number,
         max_positions:   msg.max_positions as number,
         max_daily_loss:  msg.max_daily_loss as number,
         session_filter:  msg.session_filter as string[],
@@ -88,6 +108,11 @@ export function useMT5Bridge() {
         trades_today:    msg.total_auto_trades_today as number,
         last_scan:       msg.last_scan as string,
         last_signal:     msg.last_signal as string,
+        ha_trend:        (msg.ha_trend as string)  || "",
+        status_text:     (msg.status_text as string) || "",
+        equity:          (msg.equity as number)      || 0,
+        balance:         (msg.balance as number)     || 0,
+        free_margin:     (msg.free_margin as number) || 0,
         log:             (msg.auto_log as []) || [],
       });
     } else if (type === "trailing_update") {

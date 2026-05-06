@@ -1,9 +1,9 @@
 {
-  "mt5_login": 430207633,
+  "mt5_login": 463385415,
   "mt5_password": "Pierre@136",
-  "mt5_server": "XMGlobal-MT5 18",
+  "mt5_server": "Exness-MT5Trial17",
   "websocket_port": 8765,
-  "symbol": "BTCUSD",
+  "symbol": "BTCUSDm",
   "trailing_trigger_points": 432,
   "trailing_stop_points": 62,
   "auto_trading": {
@@ -31,7 +31,7 @@
       "swing_window": 5,
       "cluster_tolerance_pct": 0.15,
       "min_touches": 2,
-      "warn_threshold_pts": 200
+      "warn_threshold_pts": 20000
     },
     
     "sideways_config": {

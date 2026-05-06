@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Zap, Bot, Settings, Plug, BarChart2, Wifi, WifiOff } from "lucide-react";
+import { Zap, Plug, BarChart2, Wifi, WifiOff } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
-import { useAIAnalysis } from "@/hooks/useAIAnalysis";
+import { useShallow } from "zustand/react/shallow";
 import { formatPrice, formatChange } from "@/utils/formatters";
-import AISetupModal from "./modals/AISetupModal";
 import MT5ConfigModal from "./modals/MT5ConfigModal";
 
 interface HeaderProps {
@@ -13,12 +12,20 @@ interface HeaderProps {
 }
 
 export default function Header({ onHistoryClick }: HeaderProps) {
-  const [showAISetup, setShowAISetup]   = useState(false);
-  const [showMT5, setShowMT5]           = useState(false);
-  const { analyze, isAnalyzing }        = useAIAnalysis();
+  const [showMT5, setShowMT5] = useState(false);
 
+  // ✅ Hanya subscribe field yang dipakai Header — tick update tidak trigger re-render komponen lain
   const { currentPrice, priceChange, priceChangePercent, currentSession, isConnected, autoTrading } =
-    useAppStore();
+    useAppStore(
+      useShallow((s) => ({
+        currentPrice:        s.currentPrice,
+        priceChange:         s.priceChange,
+        priceChangePercent:  s.priceChangePercent,
+        currentSession:      s.currentSession,
+        isConnected:         s.isConnected,
+        autoTrading:         s.autoTrading,
+      }))
+    );
 
   const priceDir = priceChange >= 0 ? "price-up" : "price-down";
 
@@ -94,17 +101,6 @@ export default function Header({ onHistoryClick }: HeaderProps) {
         <div style={{ flex: 1 }} />
 
         {/* Action buttons */}
-        <button id="btn-ai-analyze" className="btn btn-primary" onClick={analyze} disabled={isAnalyzing}
-          style={{ fontSize: 11 }}>
-          <Bot size={13} />
-          {isAnalyzing ? "Analyzing…" : "AI ANALYZE"}
-        </button>
-
-        <button id="btn-ai-setup" className="btn btn-ghost" onClick={() => setShowAISetup(true)}
-          style={{ fontSize: 11 }}>
-          <Settings size={13} /> AI SETUP
-        </button>
-
         <button id="btn-mt5-config" className="btn btn-ghost" onClick={() => setShowMT5(true)}
           style={{ fontSize: 11 }}>
           <Plug size={13} /> MT5
@@ -116,8 +112,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
         </button>
       </header>
 
-      {showAISetup && <AISetupModal onClose={() => setShowAISetup(false)} />}
-      {showMT5     && <MT5ConfigModal onClose={() => setShowMT5(false)} />}
+      {showMT5 && <MT5ConfigModal onClose={() => setShowMT5(false)} />}
     </>
   );
 }

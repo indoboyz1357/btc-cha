@@ -44,3 +44,6 @@ logs/
 
 # Build
 build/
+
+# Terminal Paste Image folder
+.cp-images/

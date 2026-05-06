@@ -22,18 +22,26 @@ export interface CrystalHACandle {
   ha_high: number;
   ha_low: number;
   ha_close: number;
+  close: number;
+  ema20: number;
+  ema50: number;
   color: CandleColor;
-  reversal_signal: boolean;
+  reversal_signal?: boolean;
+  // Signal fields
+  circle_buy?: boolean;
+  circle_sell?: boolean;
+  arrow_buy?: boolean;
+  arrow_sell?: boolean;
 }
 
 export interface TrendCard {
   timeframe: Timeframe;
   direction: "bullish_strong" | "bullish_weak" | "bearish_strong" | "bearish_weak" | "sideways";
   label: string;
-  strength: number;      // 0–100
-  momentum: number;      // 0–100
-  reversalRisk: number;  // 0–100
-  aligned: number;       // aligned candles out of 10
+  strength: number;
+  momentum: number;
+  reversalRisk: number;
+  aligned: number;
 }
 
 export interface Position {
@@ -45,8 +53,8 @@ export interface Position {
   tp: number;
   profit: number;
   open_time: string;
-  trailing_status: "active" | "standby" | "off";
-  trailing_high: number;
+  trailing_status?: "active" | "standby" | "off";
+  trailing_high?: number;
   source?: "auto" | "manual";
 }
 
@@ -105,13 +113,16 @@ export interface AutoTradeLog {
 export interface AutoTradingSettings {
   enabled: boolean;
   scan_interval: number;
-  min_confidence: number;
   lot_size: number;
   max_positions: number;
   max_daily_loss: number;
   session_filter: string[];
   allow_buy: boolean;
   allow_sell: boolean;
+  follow_trend: boolean;
+  entry_mode: "aggressive" | "confirmed";
+  position_mode: "single" | "swap_profit" | "instant_reverse";
+  logic_timeframe: Timeframe;
 }
 
 export interface AutoTradingState extends AutoTradingSettings {
@@ -119,6 +130,11 @@ export interface AutoTradingState extends AutoTradingSettings {
   trades_today: number;
   last_scan: string;
   last_signal: string;
+  ha_trend: string;
+  status_text: string;
+  equity: number;
+  balance: number;
+  free_margin: number;
   log: AutoTradeLog[];
 }
 

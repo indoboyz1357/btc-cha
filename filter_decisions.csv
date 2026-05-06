@@ -1,2 +1,3 @@
 timestamp,m15_candle_time,symbol,direction,signal_type,final_decision,blocked_by_filter,zone_pass,zone_reason,sideways_pass,sideways_reason,timing_pass,timing_reason,m5_color,m1_color,nearest_resistance,nearest_support,wait_seconds,final_action
 2026-05-06T23:30:29,123,BTCUSD,buy,circle,ENTRY,,True,ok,True,ok,True,ok,blue,blue,20000,19000,0,execute_order
+2026-05-07T00:22:18,1778087700,BTCUSDm,sell,circle,BLOCKED,sideways,True,room_to_support($473.94),False,sideways_crystal(3buy/3sell),True,disabled,,,81679.415,81030.26199999999,0,skip_no_entry

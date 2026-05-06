@@ -26,19 +26,19 @@ log = logging.getLogger("OmegaBridge")
 
 # ===== SMART FILTERS IMPORT =====
 try:
-    from filters import check_all_filters, FilterResult
+    from filters import check_all_filters_async, FilterResult
     FILTERS_AVAILABLE = True
     print("[BRIDGE] [OK] Smart filters loaded")
 except ImportError as e:
     FILTERS_AVAILABLE = False
     print(f"[BRIDGE] ⚠️  Smart filters not available: {e}")
-    
+
     class FilterResult:
         def __init__(self):
             self.final_decision = 'ENTRY'
             self.blocked_by = None
-    
-    def check_all_filters(*args, **kwargs):
+
+    async def check_all_filters_async(*args, **kwargs):
         result = FilterResult()
         return result
 
@@ -745,7 +745,7 @@ async def auto_trading_loop():
         # ════════════════════════════════════════════════════════════════════════
         if FILTERS_AVAILABLE:
             filter_cfg = cfg.get("filters", {})
-            filter_result = await check_all_filters(
+            filter_result = await check_all_filters_async(
                 symbol=SYMBOL,
                 direction=entry_dir,
                 signal_type=signal_type,

@@ -1,28 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
-  Timeframe,
-  Candle,
-  CrystalHACandle,
-  TrendCard,
-  Position,
-  PendingOrder,
-  AIAnalysis,
-  AutoTradingState,
-  TradeSetup,
-  Toast,
+  Timeframe, Candle, CrystalHACandle, TrendCard,
+  Position, PendingOrder, AutoTradingState, TradeSetup, Toast,
 } from "@/types";
 import { calculateTrendCard } from "@/utils/trendCalculator";
 
 interface AppState {
-  // ── Connection ──────────────────────────────────────────────────────────────
   bridgeUrl: string;
   isConnected: boolean;
   reconnectAttempts: number;
   setBridgeUrl: (url: string) => void;
   setConnected: (v: boolean) => void;
 
-  // ── Market data ─────────────────────────────────────────────────────────────
   currentPrice: number;
   prevPrice: number;
   priceChange: number;
@@ -30,38 +20,30 @@ interface AppState {
   currentSession: string;
   updatePrice: (bid: number, ask: number) => void;
 
-  // ── Candles & Crystal HA ────────────────────────────────────────────────────
   candles: Partial<Record<Timeframe, Candle[]>>;
   crystalHA: Partial<Record<Timeframe, CrystalHACandle[]>>;
   trendCards: Partial<Record<Timeframe, TrendCard>>;
   updateCandles: (tf: Timeframe, data: Candle[]) => void;
   updateCrystalHA: (tf: Timeframe, data: CrystalHACandle[]) => void;
 
-  // ── Chart ───────────────────────────────────────────────────────────────────
   activeTimeframe: Timeframe;
   setActiveTimeframe: (tf: Timeframe) => void;
   activeIndicators: string[];
   toggleIndicator: (name: string) => void;
 
-  // ── AI config ───────────────────────────────────────────────────────────────
+  // Per-timeframe chart settings (independent!)
+  tfSettings: Partial<Record<Timeframe, { activeTA: string[]; chartMode: "omega" | "normal" }>>;
+  setTfSetting: (tf: Timeframe, key: "activeTA" | "chartMode", value: string[] | "omega" | "normal") => void;
+
   openRouterKey: string;
   selectedModel: string;
   setOpenRouterKey: (k: string) => void;
   setSelectedModel: (m: string) => void;
 
-  // ── AI Analysis ─────────────────────────────────────────────────────────────
-  isAnalyzing: boolean;
-  lastAnalysis: AIAnalysis | null;
-  analysisHistory: AIAnalysis[];
-  setAnalyzing: (v: boolean) => void;
-  setAnalysis: (a: AIAnalysis) => void;
-
-  // ── Auto trading ────────────────────────────────────────────────────────────
   autoTrading: AutoTradingState;
   updateAutoStatus: (data: Partial<AutoTradingState>) => void;
   clearAutoLog: () => void;
 
-  // ── Execution ───────────────────────────────────────────────────────────────
   pendingSetup: TradeSetup | null;
   openPositions: Position[];
   pendingOrders: PendingOrder[];
@@ -69,34 +51,54 @@ interface AppState {
   updatePositions: (data: Position[]) => void;
   updateOrders: (data: PendingOrder[]) => void;
 
-  // ── Toasts ──────────────────────────────────────────────────────────────────
   toasts: Toast[];
   addToast: (type: Toast["type"], message: string) => void;
   removeToast: (id: string) => void;
 
-  // ── MT5 config ──────────────────────────────────────────────────────────────
   mt5Login: string;
   mt5Password: string;
   mt5Server: string;
   setMt5Config: (login: string, password: string, server: string) => void;
 
-  // ── WebSocket send ──────────────────────────────────────────────────────────
   _ws: WebSocket | null;
   setWs: (ws: WebSocket | null) => void;
   sendCommand: (cmd: object) => void;
 }
 
+const DEFAULT_AUTO: AutoTradingState = {
+  enabled: false,
+  scan_interval: 30,
+  lot_size: 0.01,
+  max_positions: 1,
+  max_daily_loss: 5,
+  session_filter: ["london", "new_york", "sydney", "tokyo"],
+  allow_buy: true,
+  allow_sell: true,
+  follow_trend: true,
+  entry_mode: "confirmed",
+  position_mode: "single",
+  logic_timeframe: "M15",
+  daily_loss: 0,
+  trades_today: 0,
+  last_scan: "",
+  last_signal: "",
+  ha_trend: "",
+  status_text: "",
+  equity: 0,
+  balance: 0,
+  free_margin: 0,
+  log: [],
+};
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // ── Connection ────────────────────────────────────────────────────────
       bridgeUrl: "ws://localhost:8765",
       isConnected: false,
       reconnectAttempts: 0,
       setBridgeUrl: (url) => set({ bridgeUrl: url }),
       setConnected: (v) => set({ isConnected: v }),
 
-      // ── Market ────────────────────────────────────────────────────────────
       currentPrice: 0,
       prevPrice: 0,
       priceChange: 0,
@@ -115,7 +117,6 @@ export const useAppStore = create<AppState>()(
         set({ currentPrice: mid, prevPrice: prev, priceChange: chg, priceChangePercent: pct, currentSession: session });
       },
 
-      // ── Candles & HA ─────────────────────────────────────────────────────
       candles: {},
       crystalHA: {},
       trendCards: {},
@@ -127,7 +128,6 @@ export const useAppStore = create<AppState>()(
           return { crystalHA: { ...s.crystalHA, [tf]: data }, trendCards: cards };
         }),
 
-      // ── Chart ─────────────────────────────────────────────────────────────
       activeTimeframe: "M15",
       setActiveTimeframe: (tf) => set({ activeTimeframe: tf }),
       activeIndicators: ["ema20"],
@@ -138,46 +138,32 @@ export const useAppStore = create<AppState>()(
             : [...s.activeIndicators, name],
         })),
 
-      // ── AI config ─────────────────────────────────────────────────────────
+      // Per-TF settings — setiap TF punya state sendiri, gak ganggu TF lain!
+      tfSettings: {},
+      setTfSetting: (tf, key, value) =>
+        set((s) => ({
+          tfSettings: {
+            ...s.tfSettings,
+            [tf]: {
+              activeTA:  "omega",
+              chartMode: "omega",
+              ...s.tfSettings[tf],
+              [key]: value,
+            },
+          },
+        })),
+
       openRouterKey: "",
       selectedModel: "deepseek/deepseek-chat-v3-5",
       setOpenRouterKey: (k) => set({ openRouterKey: k }),
       setSelectedModel: (m) => set({ selectedModel: m }),
 
-      // ── AI Analysis ───────────────────────────────────────────────────────
-      isAnalyzing: false,
-      lastAnalysis: null,
-      analysisHistory: [],
-      setAnalyzing: (v) => set({ isAnalyzing: v }),
-      setAnalysis: (a) =>
-        set((s) => ({
-          lastAnalysis: a,
-          analysisHistory: [a, ...s.analysisHistory].slice(0, 100),
-        })),
-
-      // ── Auto Trading ──────────────────────────────────────────────────────
-      autoTrading: {
-        enabled: false,
-        scan_interval: 30,
-        min_confidence: 70,
-        lot_size: 0.01,
-        max_positions: 2,
-        max_daily_loss: 10,
-        session_filter: ["london", "new_york"],
-        allow_buy: true,
-        allow_sell: true,
-        daily_loss: 0,
-        trades_today: 0,
-        last_scan: "",
-        last_signal: "",
-        log: [],
-      },
+      autoTrading: DEFAULT_AUTO,
       updateAutoStatus: (data) =>
         set((s) => ({ autoTrading: { ...s.autoTrading, ...data } })),
       clearAutoLog: () =>
         set((s) => ({ autoTrading: { ...s.autoTrading, log: [] } })),
 
-      // ── Execution ─────────────────────────────────────────────────────────
       pendingSetup: null,
       openPositions: [],
       pendingOrders: [],
@@ -185,7 +171,6 @@ export const useAppStore = create<AppState>()(
       updatePositions: (data) => set({ openPositions: data }),
       updateOrders: (data) => set({ pendingOrders: data }),
 
-      // ── Toasts ────────────────────────────────────────────────────────────
       toasts: [],
       addToast: (type, message) => {
         const id = Math.random().toString(36).slice(2);
@@ -195,14 +180,12 @@ export const useAppStore = create<AppState>()(
       removeToast: (id) =>
         set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
-      // ── MT5 config ────────────────────────────────────────────────────────
       mt5Login: "430207633",
       mt5Password: "",
       mt5Server: "XMGlobal-MT5 18",
       setMt5Config: (login, password, server) =>
         set({ mt5Login: login, mt5Password: password, mt5Server: server }),
 
-      // ── WebSocket ─────────────────────────────────────────────────────────
       _ws: null,
       setWs: (ws) => set({ _ws: ws }),
       sendCommand: (cmd) => {
@@ -221,16 +204,26 @@ export const useAppStore = create<AppState>()(
         mt5Login: s.mt5Login,
         mt5Password: s.mt5Password,
         mt5Server: s.mt5Server,
-        analysisHistory: s.analysisHistory,
         autoTrading: {
-          scan_interval: s.autoTrading.scan_interval,
-          min_confidence: s.autoTrading.min_confidence,
-          lot_size: s.autoTrading.lot_size,
-          max_positions: s.autoTrading.max_positions,
-          max_daily_loss: s.autoTrading.max_daily_loss,
-          session_filter: s.autoTrading.session_filter,
-          allow_buy: s.autoTrading.allow_buy,
-          allow_sell: s.autoTrading.allow_sell,
+          scan_interval:        s.autoTrading.scan_interval,
+          min_confidence:       s.autoTrading.min_confidence,
+          lot_size:             s.autoTrading.lot_size,
+          max_positions:        s.autoTrading.max_positions,
+          max_daily_loss:       s.autoTrading.max_daily_loss,
+          session_filter:       s.autoTrading.session_filter,
+          allow_buy:            s.autoTrading.allow_buy,
+          allow_sell:           s.autoTrading.allow_sell,
+          entry_mode:           s.autoTrading.entry_mode,
+          position_mode:        s.autoTrading.position_mode,
+          sl_mode:              s.autoTrading.sl_mode,
+          sl_atr_mult:          s.autoTrading.sl_atr_mult,
+          tp_atr_mult:          s.autoTrading.tp_atr_mult,
+          trailing_enabled:     s.autoTrading.trailing_enabled,
+          trailing_activation:  s.autoTrading.trailing_activation,
+          ma_filter_enabled:    s.autoTrading.ma_filter_enabled,
+          ma_type:              s.autoTrading.ma_type,
+          ma_period:            s.autoTrading.ma_period,
+          logic_timeframe:      s.autoTrading.logic_timeframe,
         },
       }),
     }

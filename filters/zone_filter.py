@@ -11,7 +11,7 @@ LOOKBACK_CANDLES = 200
 SWING_WINDOW = 5
 CLUSTER_TOLERANCE_PCT = 0.15
 MIN_TOUCHES = 2
-WARN_THRESHOLD_PTS = 200      # < 200 pts = block entry
+WARN_THRESHOLD_PTS = 20000    # 20000 points — di XM (1 point=0.01) berarti $200 jarak ke S/R
 
 
 def find_swing_points(df, window=SWING_WINDOW):
@@ -102,6 +102,11 @@ def check_zone_filter(symbol, direction, current_price=None):
         if current_price is None:
             current_price = df['close'].iloc[-1]
         
+        # Konversi WARN_THRESHOLD_PTS ke satuan harga (USD)
+        sym_info = mt5.symbol_info(symbol)
+        point = sym_info.point if sym_info else 0.01
+        warn_threshold_price = WARN_THRESHOLD_PTS * point
+        
         # Find zones
         swing_highs, swing_lows = find_swing_points(df)
         resistance_zones = cluster_levels(swing_highs)
@@ -133,20 +138,20 @@ def check_zone_filter(symbol, direction, current_price=None):
         
         # CHECK FILTER
         if direction.lower() == 'buy':
-            if dist_to_r < WARN_THRESHOLD_PTS:
+            if dist_to_r < warn_threshold_price:
                 result['pass'] = False
-                result['reason'] = f"too_close_to_resistance({dist_to_r:.0f}pts)"
+                result['reason'] = f"too_close_to_resistance(${dist_to_r:.2f}, threshold=${warn_threshold_price:.2f})"
             else:
                 result['pass'] = True
-                result['reason'] = f"room_to_resistance({dist_to_r:.0f}pts)"
+                result['reason'] = f"room_to_resistance(${dist_to_r:.2f})"
         
         elif direction.lower() == 'sell':
-            if dist_to_s < WARN_THRESHOLD_PTS:
+            if dist_to_s < warn_threshold_price:
                 result['pass'] = False
-                result['reason'] = f"too_close_to_support({dist_to_s:.0f}pts)"
+                result['reason'] = f"too_close_to_support(${dist_to_s:.2f}, threshold=${warn_threshold_price:.2f})"
             else:
                 result['pass'] = True
-                result['reason'] = f"room_to_support({dist_to_s:.0f}pts)"
+                result['reason'] = f"room_to_support(${dist_to_s:.2f})"
         
         return result
         

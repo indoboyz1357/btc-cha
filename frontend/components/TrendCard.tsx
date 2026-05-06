@@ -2,14 +2,6 @@
 
 import type { TrendCard as ITrendCard } from "@/types";
 
-const DIR_CLASS: Record<string, string> = {
-  bullish_strong: "trend-bullish-strong",
-  bullish_weak:   "trend-bullish-weak",
-  bearish_strong: "trend-bearish-strong",
-  bearish_weak:   "trend-bearish-weak",
-  sideways:       "trend-sideways",
-};
-
 const DIR_ICON: Record<string, string> = {
   bullish_strong: "▲",
   bullish_weak:   "△",
@@ -18,64 +10,64 @@ const DIR_ICON: Record<string, string> = {
   sideways:       "━",
 };
 
-const PROGRESS_COLOR: Record<string, string> = {
+const DIR_COLOR: Record<string, string> = {
   bullish_strong: "var(--accent-green)",
-  bullish_weak:   "rgba(0,208,132,0.5)",
+  bullish_weak:   "rgba(0,208,132,0.65)",
   bearish_strong: "var(--accent-red)",
-  bearish_weak:   "rgba(255,68,68,0.5)",
+  bearish_weak:   "rgba(255,68,68,0.65)",
   sideways:       "var(--text-muted)",
 };
 
+const BG_COLOR: Record<string, string> = {
+  bullish_strong: "rgba(0,208,132,0.08)",
+  bullish_weak:   "rgba(0,208,132,0.04)",
+  bearish_strong: "rgba(255,68,68,0.08)",
+  bearish_weak:   "rgba(255,68,68,0.04)",
+  sideways:       "transparent",
+};
+
 export default function TrendCard({ card }: { card: ITrendCard }) {
-  const cls   = DIR_CLASS[card.direction];
   const icon  = DIR_ICON[card.direction];
-  const color = PROGRESS_COLOR[card.direction];
-  const isBull = card.direction.startsWith("bullish");
-  const isBear = card.direction.startsWith("bearish");
+  const color = DIR_COLOR[card.direction];
+  const bg    = BG_COLOR[card.direction];
+  const isSide = card.direction === "sideways";
 
   return (
-    <div className={`card ${cls} fade-in`} style={{ padding: "10px 12px" }}>
-      {/* Header row */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.06em" }}>
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+      padding: "7px 10px",
+      background: bg,
+      border: "1px solid",
+      borderColor: isSide ? "var(--border)" : color.replace(")", ", 0.25)").replace("rgba", "rgba").replace("var(--accent-green)", "rgba(0,208,132,0.25)").replace("var(--accent-red)", "rgba(255,68,68,0.25)"),
+      borderRadius: 6,
+      minWidth: 0,
+      flex: 1,
+    }}>
+      {/* Row 1: TF + strength */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em" }}>
           {card.timeframe}
         </span>
-        <span className="mono" style={{
-          fontSize: 13, fontWeight: 700,
-          color: isBull ? "var(--accent-green)" : isBear ? "var(--accent-red)" : "var(--text-muted)",
-        }}>
+        <span className="mono" style={{ fontSize: 11, fontWeight: 700, color }}>
           {card.strength}%
         </span>
       </div>
 
-      {/* Direction label */}
-      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
-        <span style={{ fontSize: 13, color: isBull ? "var(--accent-green)" : isBear ? "var(--accent-red)" : "var(--text-muted)" }}>
-          {icon}
-        </span>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "0.04em" }}>
+      {/* Row 2: Icon + Label */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ fontSize: 10, color }}>{icon}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "0.03em", whiteSpace: "nowrap" }}>
           {card.label}
         </span>
       </div>
 
-      {/* Momentum bar */}
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Momentum</span>
-          <span className="mono" style={{ fontSize: 10, color: "var(--text-secondary)" }}>{card.momentum}%</span>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${card.momentum}%`, background: color }} />
-        </div>
-      </div>
-
-      {/* Bottom stats */}
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--text-muted)" }}>
-        <span>Searah: <span className="mono" style={{ color: "var(--text-secondary)" }}>{card.aligned}/10</span></span>
-        <span style={{ color: card.reversalRisk > 40 ? "var(--accent-orange)" : "var(--text-muted)" }}>
-          ⚠ Rev: <span className="mono">{card.reversalRisk}%</span>
-        </span>
+      {/* Row 3: Thin momentum bar */}
+      <div style={{ height: 2, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${card.momentum}%`, background: color, borderRadius: 2, transition: "width 0.4s ease" }} />
       </div>
     </div>
   );
 }
+

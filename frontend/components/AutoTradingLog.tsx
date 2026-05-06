@@ -6,7 +6,7 @@ const ICON: Record<string, string> = { TRADE: "🟢", SKIP: "⏭", ERROR: "🔴"
 
 export default function AutoTradingLog() {
   const { autoTrading, clearAutoLog } = useAppStore();
-  const { log } = autoTrading;
+  const log = autoTrading.log || [];
 
   return (
     <div style={{ borderTop: "1px solid var(--border)" }}>

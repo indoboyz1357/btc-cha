@@ -16,22 +16,26 @@ export default function ManualOrderPanel() {
   const [rejEntry, setRejEntry]     = useState("");
   const [timeout, setTimeout]       = useState("5");
 
+  // Confirm state: null = idle, "buy" = waiting confirm buy, "sell" = waiting confirm sell
+  const [confirmDir, setConfirmDir] = useState<"buy" | "sell" | null>(null);
+
   const label = pendingSetup?.label ? `Setup: ${pendingSetup.label} ${direction.toUpperCase()}` : "Order Manual";
 
-  const execMarket = () => {
+  const execMarket = (dir: "buy" | "sell") => {
     sendCommand({
-      cmd:       "order_market",
-      type:      direction,
-      volume:    parseFloat(volume),
-      sl:        parseFloat(sl),
+      cmd:    "order_market",
+      type:   dir,
+      volume: parseFloat(volume),
+      sl:     parseFloat(sl),
     });
     setPendingSetup(null);
+    setConfirmDir(null);
   };
 
-  const execRejection = () => {
+  const execRejection = (dir: "buy" | "sell") => {
     sendCommand({
       cmd:             "order_pending_rejection",
-      direction,
+      direction:       dir,
       volume:          parseFloat(volume),
       trigger_price:   parseFloat(triggerPrice),
       entry_price:     parseFloat(rejEntry),
@@ -39,6 +43,20 @@ export default function ManualOrderPanel() {
       timeout_minutes: parseInt(timeout),
     });
     setPendingSetup(null);
+    setConfirmDir(null);
+  };
+
+  const handleFirstClick = (dir: "buy" | "sell") => {
+    setDirection(dir);
+    setConfirmDir(dir);
+  };
+
+  const handleConfirm = (dir: "buy" | "sell") => {
+    orderType === "market" ? execMarket(dir) : execRejection(dir);
+  };
+
+  const handleCancel = () => {
+    setConfirmDir(null);
   };
 
   return (
@@ -87,7 +105,7 @@ export default function ManualOrderPanel() {
 
         {/* Trailing info */}
         <div style={{ padding: "6px 10px", background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "var(--radius-sm)", fontSize: 10, color: "var(--accent-blue)" }}>
-          📈 Trailing Stop otomatis: trigger +500pt → trail 250pt
+          📈 SL/TP dikelola Crystal HA Pro EA — isi SL manual jika ingin override (0 = pakai EA)
         </div>
 
         {/* Rejection fields */}
@@ -118,17 +136,70 @@ export default function ManualOrderPanel() {
           </div>
         )}
 
-        {/* Execute buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <button id="btn-exec-buy" className="btn btn-green" style={{ fontSize: 12, padding: "10px" }}
-            onClick={() => { setDirection("buy"); orderType === "market" ? execMarket() : execRejection(); }}>
-            ▲ EKSEKUSI BUY
-          </button>
-          <button id="btn-exec-sell" className="btn btn-red" style={{ fontSize: 12, padding: "10px" }}
-            onClick={() => { setDirection("sell"); orderType === "market" ? execMarket() : execRejection(); }}>
-            ▼ EKSEKUSI SELL
-          </button>
-        </div>
+        {/* ── Execute buttons ── */}
+        {confirmDir === null ? (
+          /* STEP 1: Tombol BUY & SELL sejajar */
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <button
+              id="btn-exec-buy"
+              className="btn btn-green"
+              style={{ fontSize: 12, padding: "10px", borderRadius: 8 }}
+              onClick={() => handleFirstClick("buy")}
+            >
+              ▲ BUY
+            </button>
+            <button
+              id="btn-exec-sell"
+              className="btn btn-red"
+              style={{ fontSize: 12, padding: "10px", borderRadius: 8 }}
+              onClick={() => handleFirstClick("sell")}
+            >
+              ▼ SELL
+            </button>
+          </div>
+        ) : (
+          /* STEP 2: Konfirmasi */
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              background: confirmDir === "buy" ? "rgba(0,208,132,0.08)" : "rgba(255,68,68,0.08)",
+              border: `1px solid ${confirmDir === "buy" ? "rgba(0,208,132,0.4)" : "rgba(255,68,68,0.4)"}`,
+              fontSize: 11,
+              fontWeight: 700,
+              color: confirmDir === "buy" ? "#00d084" : "#ff4444",
+              textAlign: "center",
+              letterSpacing: "0.05em",
+            }}>
+              ⚠ Konfirmasi {confirmDir === "buy" ? "▲ BUY" : "▼ SELL"} — Yakin?
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button
+                onClick={handleCancel}
+                style={{
+                  fontSize: 12, padding: "10px", borderRadius: 8, cursor: "pointer", fontWeight: 700,
+                  background: "rgba(255,255,255,0.05)", color: "var(--text-muted)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                ✕ Batal
+              </button>
+              <button
+                id={`btn-confirm-${confirmDir}`}
+                onClick={() => handleConfirm(confirmDir)}
+                style={{
+                  fontSize: 12, padding: "10px", borderRadius: 8, cursor: "pointer", fontWeight: 800,
+                  background: confirmDir === "buy" ? "rgba(0,208,132,0.25)" : "rgba(255,68,68,0.25)",
+                  color: confirmDir === "buy" ? "#00d084" : "#ff4444",
+                  border: `2px solid ${confirmDir === "buy" ? "#00d084" : "#ff4444"}`,
+                  boxShadow: confirmDir === "buy" ? "0 0 12px rgba(0,208,132,0.4)" : "0 0 12px rgba(255,68,68,0.4)",
+                }}
+              >
+                ✔ YA, {confirmDir === "buy" ? "BUY" : "SELL"}!
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

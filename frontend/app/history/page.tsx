@@ -13,7 +13,7 @@ export default function HistoryPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [search, setSearch]     = useState("");
 
-  const filtered = history.filter((h) =>
+  const filtered = (history || []).filter((h) =>
     h.trend_bias?.toLowerCase().includes(search.toLowerCase()) ||
     h.market_summary?.title?.toLowerCase().includes(search.toLowerCase())
   );
