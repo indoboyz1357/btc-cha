@@ -6,9 +6,9 @@ import MetaTrader5 as mt5
 import pandas as pd
 
 # CONFIG
-LOOKBACK_CANDLES = 15
-MIN_BODY_TO_RANGE_RATIO = 0.15  # body < 15% range = small candle
-MAX_CHOP_RATIO = 0.4             # if buy:sell ratio > 0.4, considered chop
+LOOKBACK_CANDLES = 20           # diperbesar dari 15 → lebih representatif
+MIN_BODY_TO_RANGE_RATIO = 0.08  # FIX: diturunkan dari 0.15 → lebih toleran spike BTC
+MAX_CHOP_RATIO = 0.4
 
 
 def calculate_ha(df):
@@ -89,27 +89,14 @@ def check_sideways_filter(symbol, timeframe=mt5.TIMEFRAME_M15):
         
         candle_chop = body_ratio < MIN_BODY_TO_RANGE_RATIO
         
-        # COMBINE: Sideways jika MINIMAL 1 method detect
+        # COMBINE: FIX — sideways hanya kalau KEDUA method setuju
+        # Sebelumnya: salah satu saja sudah block → terlalu agresif
         if crystal_chop and candle_chop:
             return {
                 'pass': False,
-                'reason': f'sideways_strong(crystal={buy_count}buy/{sell_count}sell,body={body_ratio:.2f})',
+                'reason': f'sideways_confirmed(crystal={buy_count}b/{sell_count}s,body={body_ratio:.2f})',
                 'is_sideways': True,
                 'method': 'both'
-            }
-        elif crystal_chop:
-            return {
-                'pass': False,
-                'reason': f'sideways_crystal({buy_count}buy/{sell_count}sell)',
-                'is_sideways': True,
-                'method': 'crystal'
-            }
-        elif candle_chop:
-            return {
-                'pass': False,
-                'reason': f'sideways_candles(body_ratio={body_ratio:.2f})',
-                'is_sideways': True,
-                'method': 'candles'
             }
         
         return {

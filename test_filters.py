@@ -6,7 +6,7 @@ import MetaTrader5 as mt5
 import pandas as pd
 from datetime import datetime, timedelta
 
-SYMBOL = "BTCUSD"
+SYMBOL = "BTCUSDm"   # FIX: sesuai config.json (Exness)
 MAGIC = 20260505
 DAYS_BACK = 30
 
@@ -33,7 +33,22 @@ def main():
     
     df = pd.DataFrame(list(deals), columns=deals[0]._asdict().keys())
     df['time'] = pd.to_datetime(df['time'], unit='s')
-    df = df[(df['symbol'] == SYMBOL) & (df['magic'] == MAGIC)]
+
+    # DEBUG: kalau 0 trades ditemukan, tampilkan semua yang ada di history
+    filtered = df[(df['symbol'] == SYMBOL) & (df['magic'] == MAGIC)]
+    if len(filtered) == 0:
+        print(f"\n⚠️  Tidak ada trade dengan symbol={SYMBOL} magic={MAGIC}")
+        print(f"\n📋 Semua trade di history {DAYS_BACK} hari terakhir:")
+        summary = df[df['entry'] == 0].groupby(['symbol', 'magic']).size().reset_index(name='count')
+        if len(summary) == 0:
+            print("   (tidak ada trade sama sekali)")
+        else:
+            for _, row in summary.iterrows():
+                print(f"   symbol={row['symbol']}  magic={row['magic']}  trades={row['count']}")
+        mt5.shutdown()
+        return
+
+    df = filtered
     
     entries = df[df['entry'] == 0].copy()
     exits = df[df['entry'] == 1].copy()

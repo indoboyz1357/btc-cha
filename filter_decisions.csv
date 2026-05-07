@@ -1,3 +1,18 @@
 timestamp,m15_candle_time,symbol,direction,signal_type,final_decision,blocked_by_filter,zone_pass,zone_reason,sideways_pass,sideways_reason,timing_pass,timing_reason,m5_color,m1_color,nearest_resistance,nearest_support,wait_seconds,final_action
 2026-05-06T23:30:29,123,BTCUSD,buy,circle,ENTRY,,True,ok,True,ok,True,ok,blue,blue,20000,19000,0,execute_order
 2026-05-07T00:22:18,1778087700,BTCUSDm,sell,circle,BLOCKED,sideways,True,room_to_support($473.94),False,sideways_crystal(3buy/3sell),True,disabled,,,81679.415,81030.26199999999,0,skip_no_entry
+2026-05-07T00:30:19,1778088600,BTCUSDm,sell,arrow,BLOCKED,sideways,True,room_to_support($446.75),False,sideways_crystal(3buy/3sell),True,disabled,,,81679.415,81030.26199999999,0,skip_no_entry
+2026-05-07T03:01:55,1778097600,BTCUSDm,buy,arrow,BLOCKED,zone,False,buy_blocked_near_resistance(dist=$162.70 threshold=$326.07),True,disabled,True,disabled,,,81679.415,81030.26199999999,0,skip_no_entry
+2026-05-07T03:45:26,1778100300,BTCUSDm,sell,circle,BLOCKED,zone,False,sell_blocked_near_support(dist=$272.79 threshold=$325.30),True,disabled,True,disabled,,,81679.415,81053.17833333333,0,skip_no_entry
+2026-05-07T04:45:28,1778103900,BTCUSDm,buy,circle,BLOCKED,zone,False,buy_blocked_near_resistance(dist=$141.03 threshold=$326.17),True,disabled,True,disabled,,,81682.41428571429,81053.17833333333,0,skip_no_entry
+2026-05-07T05:15:29,1778105700,BTCUSDm,sell,circle,ENTRY,,True,sell_ok_room_to_support=$328.72,True,disabled,True,disabled,,,81682.41428571429,81053.17833333333,0,execute_order
+2026-05-07T06:30:01,1778110200,BTCUSDm,buy,circle,BLOCKED,zone,False,buy_blocked_near_resistance(dist=$294.23 threshold=$325.52),True,disabled,True,disabled,,,81674.6625,81053.17833333333,0,skip_no_entry
+2026-05-07T07:00:02,1778112000,BTCUSDm,buy,arrow,BLOCKED,zone,False,buy_blocked_near_resistance(dist=$252.84 threshold=$325.69),True,disabled,True,disabled,,,81674.6625,81053.17833333333,0,skip_no_entry
+2026-05-07T07:00:32,1778112000,BTCUSDm,buy,arrow,BLOCKED,zone,False,buy_blocked_near_resistance(dist=$242.48 threshold=$325.73),True,disabled,True,disabled,,,81674.6625,81053.17833333333,0,skip_no_entry
+2026-05-07T07:30:03,1778113800,BTCUSDm,sell,arrow,BLOCKED,zone,False,sell_blocked_near_support(dist=$155.61 threshold=$324.79),True,disabled,True,disabled,,,81674.6625,81040.87142857142,0,skip_no_entry
+2026-05-07T08:30:04,1778117400,BTCUSDm,buy,circle,ENTRY,,True,buy_ok_room_to_resistance=$455.54,True,disabled,True,disabled,,,81652.98888888888,81040.87142857142,0,execute_order
+2026-05-07T09:15:06,1778120100,BTCUSDm,sell,circle,ENTRY,,True,sell_ok_room_to_support=$9999.00,True,disabled,True,disabled,,,81115.39,,0,execute_order
+2026-05-07T10:00:07,1778122800,BTCUSDm,buy,circle,BLOCKED,zone,False,buy_blocked_near_resistance(dist=$21.35 threshold=$324.38),True,disabled,True,disabled,,,81115.39,80936.78454545456,0,skip_no_entry
+2026-05-07T10:30:08,1778124600,BTCUSDm,sell,circle,ENTRY,,True,sell_ok_room_to_support=$9999.00,True,disabled,True,disabled,,,81115.39,,0,execute_order
+2026-05-07T11:10:39,1778126400,BTCUSDm,sell,arrow,ENTRY,,True,sell_ok_room_to_support=$9999.00,True,disabled,True,disabled,,,81115.39,,0,execute_order
+2026-05-07T12:01:11,1778130000,BTCUSDm,buy,arrow,ENTRY,,True,buy_ok_room_to_resistance=$623.48,True,disabled,True,disabled,,,81652.98888888888,80936.78454545456,0,execute_order

@@ -9,9 +9,9 @@ from datetime import datetime
 
 # CONFIG
 M15_CANDLE_MINUTES = 15
-SLOW_REFRESH_SEC = 30   # saat M5 belum align
+SLOW_REFRESH_SEC = 15   # saat M5 belum align (dipercepat dari 30s)
 FAST_REFRESH_SEC = 5    # saat M5 align tinggal M1
-M1_CONFIRM_CANDLES = 2   # tunggu 2 candle M1 setelah align
+M1_CONFIRM_CANDLES = 0  # FIX: 0 = langsung entry begitu M5+M1 align, tidak nunggu lagi
 MAX_WAIT_SECONDS = 900   # 15 menit max wait
 
 
@@ -28,8 +28,8 @@ def get_candle_color(symbol, timeframe):
     - RED    = bearish_weak (continuation down)
     """
     try:
-        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, 5)
-        if rates is None or len(rates) < 3:
+        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, 50)
+        if rates is None or len(rates) < 10:
             return 'unknown'
         
         df = pd.DataFrame(rates)
@@ -91,8 +91,127 @@ def _get_current_m15_candle_start():
     return now.replace(minute=minute_block, second=0, microsecond=0)
 
 
-async def check_timing_filter_async(symbol, direction, max_wait_seconds=MAX_WAIT_SECONDS,
+async def check_timing_filter_async(symbol, direction, signal_type="circle",
+                                     max_wait_seconds=MAX_WAIT_SECONDS,
                                      wait_mode=True, callback=None):
+    """
+    ASYNC MAIN timing filter.
+
+    ARROW  → langsung PASS, tidak perlu timing check.
+             Arrow di M15 sudah konfirmasi kuat, nunggu M5+M1 justru terlambat.
+
+    CIRCLE → cek M5 warna BERLAWANAN dengan direction (belum balik).
+             Artinya momentum reversal baru mulai, belum terlambat masuk.
+             Contoh: CIRCLE BUY → M5 masih orange/red (bearish) = harga baru
+             mulai balik, entry di awal. Kalau M5 sudah hijau = sudah terlambat.
+    """
+    # ARROW: skip timing, langsung pass
+    if signal_type == "arrow":
+        return {
+            'pass': True,
+            'reason': 'arrow_skip_timing',
+            'm5_color': '', 'm1_color': '',
+            'wait_seconds': 0, 'expired': False
+        }
+
+    # CIRCLE: tunggu M5 masih berlawanan (konfirmasi baru mulai reversal)
+    try:
+        start_time = datetime.now()
+        initial_m15_candle = _get_current_m15_candle_start()
+        wait_count = 0
+
+        while True:
+            elapsed = (datetime.now() - start_time).total_seconds()
+
+            # M15 candle expired
+            current_m15 = _get_current_m15_candle_start()
+            if current_m15 != initial_m15_candle:
+                return {
+                    'pass': False, 'reason': 'm15_candle_expired',
+                    'm5_color': '', 'm1_color': '',
+                    'wait_seconds': int(elapsed), 'expired': True
+                }
+
+            # Timeout
+            if elapsed > max_wait_seconds:
+                return {
+                    'pass': False, 'reason': f'timeout_{int(elapsed)}s',
+                    'm5_color': get_candle_color(symbol, mt5.TIMEFRAME_M5),
+                    'm1_color': get_candle_color(symbol, mt5.TIMEFRAME_M1),
+                    'wait_seconds': int(elapsed), 'expired': True
+                }
+
+            m5_color = get_candle_color(symbol, mt5.TIMEFRAME_M5)
+            m1_color = get_candle_color(symbol, mt5.TIMEFRAME_M1)
+
+            # Untuk CIRCLE BUY: M5 masih bearish (orange/red) = reversal baru mulai
+            # Untuk CIRCLE SELL: M5 masih bullish (blue/green) = reversal baru mulai
+            bearish_colors = {'red', 'orange'}
+            bullish_colors = {'blue', 'green'}
+
+            if direction == 'buy':
+                # M5 masih bearish = entry di awal reversal, bagus
+                m5_early = m5_color in bearish_colors
+            else:
+                # M5 masih bullish = entry di awal reversal, bagus
+                m5_early = m5_color in bullish_colors
+
+            if callback:
+                try:
+                    cb_data = {
+                        'm5_color': m5_color, 'm1_color': m1_color,
+                        'm5_ok': m5_early,
+                        'wait_seconds': int(elapsed), 'wait_count': wait_count
+                    }
+                    if asyncio.iscoroutinefunction(callback):
+                        await callback(cb_data)
+                    else:
+                        callback(cb_data)
+                except:
+                    pass
+
+            if not wait_mode:
+                if m5_early:
+                    return {
+                        'pass': True,
+                        'reason': f'circle_early_entry_m5={m5_color}',
+                        'm5_color': m5_color, 'm1_color': m1_color,
+                        'wait_seconds': 0, 'expired': False
+                    }
+                else:
+                    return {
+                        'pass': False,
+                        'reason': f'circle_too_late_m5={m5_color}',
+                        'm5_color': m5_color, 'm1_color': m1_color,
+                        'wait_seconds': 0, 'expired': False
+                    }
+
+            # WAIT MODE: tunggu kondisi early reversal terbentuk
+            if m5_early:
+                return {
+                    'pass': True,
+                    'reason': f'circle_early_entry_m5={m5_color}',
+                    'm5_color': m5_color, 'm1_color': m1_color,
+                    'wait_seconds': int(elapsed), 'expired': False
+                }
+            else:
+                # M5 sudah searah = terlambat, tidak perlu nunggu lagi
+                return {
+                    'pass': False,
+                    'reason': f'circle_too_late_m5={m5_color}_already_moved',
+                    'm5_color': m5_color, 'm1_color': m1_color,
+                    'wait_seconds': int(elapsed), 'expired': False
+                }
+
+    except Exception as e:
+        import traceback
+        print(f"[TIMING FILTER ERROR] {e}")
+        traceback.print_exc()
+        return {
+            'pass': False, 'reason': f'error:{str(e)[:50]}',
+            'm5_color': '', 'm1_color': '',
+            'wait_seconds': 0, 'expired': True
+        }
     """
     ASYNC MAIN timing filter - non-blocking wait
     
@@ -109,8 +228,6 @@ async def check_timing_filter_async(symbol, direction, max_wait_seconds=MAX_WAIT
     try:
         start_time = datetime.now()
         initial_m15_candle = _get_current_m15_candle_start()
-        
-        m5_aligned_since = None
         wait_count = 0
         
         while True:
@@ -182,46 +299,21 @@ async def check_timing_filter_async(symbol, direction, max_wait_seconds=MAX_WAIT
             
             # WAIT MODE
             if m5_ok and m1_ok:
-                # Both aligned - wait for M1 confirmation
-                if m5_aligned_since is None:
-                    m5_aligned_since = datetime.now()
-                
-                aligned_duration = (datetime.now() - m5_aligned_since).total_seconds()
-                
-                # Wait M1_CONFIRM_CANDLES * 60 seconds
-                if aligned_duration >= (M1_CONFIRM_CANDLES * 60):
-                    # Re-check after confirmation period
-                    final_m5 = get_candle_color(symbol, mt5.TIMEFRAME_M5)
-                    final_m1 = get_candle_color(symbol, mt5.TIMEFRAME_M1)
-                    
-                    if is_color_aligned(direction, final_m5) and is_color_aligned(direction, final_m1):
-                        return {
-                            'pass': True,
-                            'reason': f'confirmed_m5={final_m5}_m1={final_m1}',
-                            'm5_color': final_m5, 'm1_color': final_m1,
-                            'wait_seconds': int(elapsed), 'expired': False
-                        }
-                    else:
-                        # Lost alignment during confirmation, reset
-                        m5_aligned_since = None
-                        await asyncio.sleep(FAST_REFRESH_SEC)
-                        wait_count += 1
-                        continue
-                else:
-                    # Still in confirmation period, fast refresh
-                    await asyncio.sleep(FAST_REFRESH_SEC)
-                    wait_count += 1
-                    continue
+                # Kedua TF align — langsung pass, tidak perlu nunggu konfirmasi lagi
+                return {
+                    'pass': True,
+                    'reason': f'aligned_m5={m5_color}_m1={m1_color}',
+                    'm5_color': m5_color, 'm1_color': m1_color,
+                    'wait_seconds': int(elapsed), 'expired': False
+                }
             
             elif m5_ok and not m1_ok:
-                # M5 aligned, waiting for M1
-                m5_aligned_since = None  # reset confirmation
+                # M5 align, tunggu M1 — fast refresh
                 await asyncio.sleep(FAST_REFRESH_SEC)
                 wait_count += 1
             
             else:
-                # M5 not aligned yet
-                m5_aligned_since = None
+                # M5 belum align — slow refresh
                 await asyncio.sleep(SLOW_REFRESH_SEC)
                 wait_count += 1
                 

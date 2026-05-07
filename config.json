@@ -20,9 +20,9 @@
   },
   "filters": {
     "zone_enabled": true,
-    "sideways_enabled": false,
-    "timing_enabled": false,
-    "timing_wait_mode": false,
+    "sideways_enabled": true,
+    "timing_enabled": true,
+    "timing_wait_mode": true,
     "max_timing_wait_sec": 900,
     "shadow_mode": false,
 

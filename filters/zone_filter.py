@@ -9,7 +9,7 @@ LOOKBACK_CANDLES = 200
 SWING_WINDOW = 5
 CLUSTER_TOLERANCE_PCT = 0.15
 MIN_TOUCHES = 2
-WARN_THRESHOLD_PCT = 0.003   # 0.3% dari harga = ~$250 kalau BTC $83k
+WARN_THRESHOLD_PCT = 0.004   # 0.4% dari harga = ~$250 kalau BTC $83k
 
 
 def find_swing_points(df, window=SWING_WINDOW):
